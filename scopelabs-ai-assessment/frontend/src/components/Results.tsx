@@ -131,6 +131,12 @@ export function Results() {
     return () => {
       clearTimeout(pageTimer);
       clearTimeout(aiTimer);
+
+      // If the user navigates away from the result page (e.g. back button or home button),
+      // we should clear the assessment data so they don't resume it later.
+      if (!sharedData) {
+        localStorage.removeItem('scopelabs-assessment');
+      }
     };
   }, []); // Run once on mount
 
@@ -409,7 +415,11 @@ export function Results() {
         )}
 
         {!sharedData && (
-          <Button variant="ghost" onClick={resetAssessment} className="text-gray-500 flex items-center justify-center">
+          <Button variant="ghost" onClick={() => {
+            resetAssessment();
+            // Optional: if using a router, navigate('/'), but since step-based routing:
+            window.location.href = '/';
+          }} className="text-gray-500 flex items-center justify-center">
             처음으로 돌아가기
           </Button>
         )}
