@@ -7,7 +7,7 @@ import { SCOPELABS_COURSE_URL } from '../constants';
 import { Button } from './ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { encodeData } from '../utils/share';
-import { saveAssessmentResult } from '../services/api';
+import { submitDiagnosis } from '../services/api';
 import {
   Radar,
   RadarChart,
@@ -28,7 +28,7 @@ import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 
 export function Results() {
-  const { userInfo: contextUserInfo, answers: contextAnswers, resetAssessment, sharedData } = useAssessment();
+  const { userInfo: contextUserInfo, answers: contextAnswers, resetAssessment, sharedData, sessionId } = useAssessment();
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(true);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -88,30 +88,19 @@ export function Results() {
   useEffect(() => {
     // Save data only if it's not shared data (i.e., it's a new assessment)
     // and we haven't started saving yet
-    if (!sharedData && !isSaving) {
+    if (!sharedData && !isSaving && sessionId) {
       const saveData = async () => {
         setIsSaving(true);
         try {
-          // Prepare data for saving (handle optional fields as null)
-          const dataToSave = {
-            userInfo: {
-              name: userInfo.name,
-              email: userInfo.email,
-              affiliation: userInfo.affiliation || null,
-              job: userInfo.job || null,
-              task: (userInfo as any).task || null, // Cast to any to access task if not in interface
-              industry: userInfo.industry || null,
-              age: userInfo.age || null,
-              marketing: userInfo.marketing || false
-            },
-            answers,
+          const resultData = {
             categoryScores,
             totalScore,
             level,
-            timestamp: new Date().toISOString()
+            comment,
+            recommendations
           };
 
-          await saveAssessmentResult(dataToSave);
+          await submitDiagnosis(sessionId, resultData);
         } catch (error) {
           console.error('Failed to save assessment result:', error);
         }

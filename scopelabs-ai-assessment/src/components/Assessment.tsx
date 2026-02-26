@@ -6,6 +6,7 @@ import { Button } from './ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { ProgressBar } from './ui/ProgressBar';
 import { CheckCircle2, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { updateProgress, submitDiagnosis } from '../services/api';
 
 export function Assessment() {
   const {
@@ -13,7 +14,9 @@ export function Assessment() {
     setCurrentQuestionIndex,
     answers,
     setAnswer,
-    setStep
+    setStep,
+    sessionId,
+    setSharedData
   } = useAssessment();
 
   const [isAutoSaving, setIsAutoSaving] = useState(false);
@@ -28,11 +31,19 @@ export function Assessment() {
   const categories = Array.from(new Set(questions.map(q => q.category)));
   const currentCategoryIndex = categories.indexOf(currentQuestion.category);
 
-  const handleAnswer = useCallback((score: number) => {
+  const handleAnswer = useCallback(async (score: number) => {
     setAnswer(currentQuestion.id, score);
 
     // Auto-save simulation
     setIsAutoSaving(true);
+
+    // Call progress API
+    if (sessionId) {
+      updateProgress(sessionId, currentQuestion.id, score).catch(err => {
+        console.error('Failed to auto-save progress', err);
+      });
+    }
+
     setTimeout(() => setIsAutoSaving(false), 800);
 
     // Gamification: Show toast at milestones
@@ -52,12 +63,24 @@ export function Assessment() {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
       }, 300); // Small delay for visual feedback
     } else {
-      // Last question
-      setTimeout(() => {
+      // Last question - submit
+      setTimeout(async () => {
+        setIsAutoSaving(true); // show loader or similar
+        // NOTE: the server currently accepts the full result_data from the frontend or calculates it itself. We'll pass nothing to result_data for now since we haven't refactored the frontend calculation out of Results.tsx yet.
+        // Wait, the Results.tsx currently calculates the result. The submission endpoint simply marks the session as finished and optionally saves result data.
+        // Let's just submit the session completion state here.
+        try {
+          if (sessionId) {
+            await submitDiagnosis(sessionId, null);
+          }
+        } catch (error) {
+          console.error('Failed to submit final result calculation.', error);
+        }
+        setIsAutoSaving(false);
         setStep('results');
       }, 500);
     }
-  }, [currentQuestion.id, currentQuestionIndex, totalQuestions, setAnswer, setCurrentQuestionIndex, setStep]);
+  }, [currentQuestion.id, currentQuestionIndex, totalQuestions, setAnswer, setCurrentQuestionIndex, setStep, sessionId]);
 
   const handlePrev = () => {
     if (currentQuestionIndex > 0) {

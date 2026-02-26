@@ -16,6 +16,7 @@ interface AssessmentState {
   userInfo: UserInfo;
   answers: Record<number, number>;
   currentQuestionIndex: number;
+  sessionId: string | null;
 }
 
 export interface SharedData {
@@ -28,6 +29,7 @@ interface AssessmentContextType extends AssessmentState {
   setUserInfo: (info: UserInfo) => void;
   setAnswer: (questionId: number, score: number) => void;
   setCurrentQuestionIndex: (index: number) => void;
+  setSessionId: (id: string | null) => void;
   resetAssessment: () => void;
   sharedData: SharedData | null;
   setSharedData: (data: SharedData | null) => void;
@@ -51,6 +53,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       userInfo: { name: '', email: '' },
       answers: {},
       currentQuestionIndex: 0,
+      sessionId: null,
     };
   });
 
@@ -79,12 +82,17 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, currentQuestionIndex: index }));
   };
 
+  const setSessionId = (id: string | null) => {
+    setState((prev) => ({ ...prev, sessionId: id }));
+  };
+
   const resetAssessment = () => {
     const newState: AssessmentState = {
       step: 'landing',
       userInfo: { name: '', email: '' },
       answers: {},
       currentQuestionIndex: 0,
+      sessionId: null,
     };
     setState(newState);
     setSharedData(null);
@@ -99,6 +107,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
         setUserInfo,
         setAnswer,
         setCurrentQuestionIndex,
+        setSessionId,
         resetAssessment,
         sharedData,
         setSharedData,

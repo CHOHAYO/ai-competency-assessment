@@ -1,41 +1,61 @@
+const API_BASE_URL = 'http://localhost:5000/api';
 
-export interface AssessmentResult {
-  userInfo: {
-    name: string;
-    email: string;
-    affiliation?: string | null;
-    job?: string | null;
-    task?: string | null;
-    industry?: string | null;
-    age?: string | null;
-    marketing?: boolean;
-  };
-  answers: Record<number, number>;
-  categoryScores: {
-    category: string;
-    score: number;
-    raw: number;
-    fullMark: number;
-  }[];
-  totalScore: number;
-  level: string;
-  timestamp: string;
+export interface UserInfo {
+  name: string;
+  email: string;
+  affiliation?: string | null;
+  job?: string | null;
+  task?: string | null;
+  industry?: string | null;
+  age?: string | null;
+  marketing?: boolean;
 }
 
-// Mock API service for saving assessment results
-export const saveAssessmentResult = async (data: AssessmentResult): Promise<{ success: boolean; id?: string }> => {
-  console.log('Saving assessment result to database...', data);
-  
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // In a real application, this would be a POST request to your backend
-  // const response = await fetch('/api/assessments', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(data)
-  // });
-  // return response.json();
+export const startDiagnosis = async (userInfo: UserInfo): Promise<{ session_id: string }> => {
+  const response = await fetch(`${API_BASE_URL}/diagnosis/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userInfo),
+  });
 
-  return { success: true, id: 'mock-id-' + Date.now() };
+  if (!response.ok) {
+    throw new Error('Failed to start diagnosis');
+  }
+
+  return response.json();
+};
+
+export const updateProgress = async (sessionId: string, questionId: number, answerValue: number): Promise<{ success: boolean }> => {
+  const response = await fetch(`${API_BASE_URL}/diagnosis/progress`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      question_id: questionId,
+      answer_value: answerValue
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to update progress');
+  }
+
+  return response.json();
+};
+
+export const submitDiagnosis = async (sessionId: string, resultData: any): Promise<{ success: boolean; data: any }> => {
+  const response = await fetch(`${API_BASE_URL}/diagnosis/submit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      result_data: resultData
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to submit diagnosis');
+  }
+
+  return response.json();
 };

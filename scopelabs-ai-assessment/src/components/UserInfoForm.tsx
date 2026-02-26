@@ -5,6 +5,7 @@ import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { Loader2 } from 'lucide-react';
+import { startDiagnosis } from '../services/api';
 
 const jobOptions: Record<string, string[]> = {
   '마케팅': ['퍼포먼스 마케팅', '콘텐츠 마케팅', '브랜드 마케팅', '그로스 마케팅', 'CRM 마케팅'],
@@ -16,11 +17,10 @@ const jobOptions: Record<string, string[]> = {
   '경영지원': ['총무', '재무/회계', '구매/자재', '법무'],
   '기타': ['기타']
 };
-
 const commonDomains = ['gmail.com', 'naver.com', 'kakao.com', 'outlook.com', 'icloud.com'];
 
 export function UserInfoForm() {
-  const { userInfo, setUserInfo, setStep } = useAssessment();
+  const { userInfo, setUserInfo, setStep, setSessionId } = useAssessment();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
@@ -28,7 +28,7 @@ export function UserInfoForm() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     const newErrors: Record<string, string> = {};
     if (!userInfo.name) newErrors.name = '이름을 입력해주세요.';
@@ -41,12 +41,19 @@ export function UserInfoForm() {
     }
 
     setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsLoading(false);
-    setStep('assessment');
+
+    try {
+      // Call backend API to start Diagnosis & create Session
+      const { session_id } = await startDiagnosis(userInfo);
+      setSessionId(session_id);
+
+      setIsLoading(false);
+      setStep('assessment');
+    } catch (error) {
+      console.error('Failed to start diagnosis:', error);
+      alert('서버와 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (field: string, value: string | boolean) => {
@@ -66,13 +73,13 @@ export function UserInfoForm() {
           setEmailSuggestions(suggestions);
           setShowSuggestions(suggestions.length > 0);
         } else {
-            setShowSuggestions(false);
+          setShowSuggestions(false);
         }
       } else {
         setShowSuggestions(false);
       }
     }
-    
+
     // Reset task if job changes
     if (field === 'job') {
       setUserInfo({ ...userInfo, job: value as string, task: '' });
@@ -108,7 +115,7 @@ export function UserInfoForm() {
                 onChange={(e) => handleChange('name', e.target.value)}
                 error={errors.name}
               />
-              
+
               <div className="relative">
                 <Input
                   label="이메일 (필수)"
@@ -118,16 +125,16 @@ export function UserInfoForm() {
                   onChange={(e) => handleChange('email', e.target.value)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   onFocus={() => {
-                      if (userInfo.email && userInfo.email.includes('@')) {
-                          const [localPart, domainPart] = userInfo.email.split('@');
-                          if (domainPart !== undefined) {
-                              const suggestions = commonDomains
-                                .filter(d => d.startsWith(domainPart))
-                                .map(d => `${localPart}@${d}`);
-                              setEmailSuggestions(suggestions);
-                              setShowSuggestions(suggestions.length > 0);
-                          }
+                    if (userInfo.email && userInfo.email.includes('@')) {
+                      const [localPart, domainPart] = userInfo.email.split('@');
+                      if (domainPart !== undefined) {
+                        const suggestions = commonDomains
+                          .filter(d => d.startsWith(domainPart))
+                          .map(d => `${localPart}@${d}`);
+                        setEmailSuggestions(suggestions);
+                        setShowSuggestions(suggestions.length > 0);
                       }
+                    }
                   }}
                   error={errors.email}
                 />
